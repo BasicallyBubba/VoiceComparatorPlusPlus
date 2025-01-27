@@ -1,0 +1,6 @@
+resemblyzer
+numpy
+pydub
+argparse
+colorama
+matplotlib
