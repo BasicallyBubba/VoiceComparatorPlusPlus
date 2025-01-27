@@ -25,34 +25,9 @@ https://visualstudio.microsoft.com/visual-cpp-build-tools/
 <br>
 <h2>Usage:</h2>
 <br>
-It is very simple to use after the necessary libraries are installed.
+It is super simple. You add two sound clips that you want to compare, and click run! <br>
+This gives you the overall similarity. <br> <br>
+You can also break down the audio files into smaller chunks, and compare those chunks to each other. <br>
+The 'Linear Window' option toggles whether the rolling window increases in size exponentially or linearly. <br>
 
-```bash
-cd VoiceComparator
-python3.11 main.py --voice1 denemeSes1.mp3 --voice2 denemeKisi2.ogg
-
-```
-
-<h2>Example:</h2>
-
-### VOICE COMPARISON OF THE SAME PERSON:
-<img src="img/ayni.png">
-
-
-<br>
-<br>
-
-### COMPARISON OF THE VOICES OF DIFFERENT PEOPLE:
-<img src="img/farkli.png">
-
-
-
-<h2>Thanks </h2>
-<br>
-    Thanks for providing audio samples:<br>
-<br>
-
-<a href="https://t.me/sudodr"> `https://t.me/sudodr` </a><br>
-<a href="https://t.me/araskargo_resmi"> `https://t.me/araskargo_resmi` </a> <br>
-<a href="https://t.me/araskargo_resmi"> `https://t.me/setpassunlock`</a> <br>
 </p>
