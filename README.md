@@ -11,19 +11,16 @@
 
 <br>
 <h2>Required libraries:</h2> 
-
+<br>
+All python dependencies are listed in requirements.txt, which you can automagically install with
 ```bash
-# Linux & MacOS
-python3.11 -m pip install pydub numpy resemblyzer argparse time colorama
-
+pip install -r requirements.txt
 ```
+<br>
+You will also need C++ build tools otherwise torch will get angy at you.
+https://visualstudio.microsoft.com/visual-cpp-build-tools/ 
 
-```bash
-# Windows
-pip install install pydub numpy resemblyzer argparse time colorama
-
-```
-
+<br>
 <h2>Usage:</h2>
 <br>
 It is very simple to use after the necessary libraries are installed.
