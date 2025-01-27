@@ -20,6 +20,8 @@ from colorama import *
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import matplotlib.pyplot as plt
+from concurrent.futures import ThreadPoolExecutor
+from tkinter import ttk  # Add this import for the progress bar
 
 
 # Style colors and whatnot
@@ -192,13 +194,7 @@ def CompareRandomChunks(sound_1_path:str, sound_2_path:str, window_size:int, num
     chunk_size = window_size * 16000  # window_size in seconds to samples (16kHz)
     similarities = []
 
-    for _ in range(num_chunks):
-        if random_order:
-            start_1 = random.randint(0, len(file_1) - chunk_size)
-            start_2 = random.randint(0, len(file_2) - chunk_size)
-        else:
-            start_1 = _ * chunk_size
-            start_2 = _ * chunk_size
+    def compare_chunk(start_1, start_2):
         chunk_1 = file_1[start_1:start_1 + chunk_size]
         chunk_2 = file_2[start_2:start_2 + chunk_size]
 
@@ -211,7 +207,21 @@ def CompareRandomChunks(sound_1_path:str, sound_2_path:str, window_size:int, num
 
         # calculate cosine similarity
         similarity = dot_product_size / (norm_chunk1 * norm_chunk2)
-        similarities.append(similarity * 100)
+        return similarity * 100
+
+    with ThreadPoolExecutor(max_workers=num_threads_var.get()) as executor:
+        futures = []
+        for _ in range(num_chunks):
+            if random_order:
+                start_1 = random.randint(0, len(file_1) - chunk_size)
+                start_2 = random.randint(0, len(file_2) - chunk_size)
+            else:
+                start_1 = _ * chunk_size
+                start_2 = _ * chunk_size
+            futures.append(executor.submit(compare_chunk, start_1, start_2))
+
+        for future in futures:
+            similarities.append(future.result())
 
     average_similarity = np.mean(similarities)
     InformationPrinter(f"Window size: {window_size} seconds, Average similarity: {average_similarity}%")
@@ -265,34 +275,51 @@ def plot_similarities(window_sizes, similarities, control_similarities_1, contro
 
     plt.subplot(2, 1, 2)
     plt.axis('off')
+    peak_similarity = max(similarities)
+    if peak_similarity < 60:
+        determination = "Low similarity - Not a likely match."
+        color = "red"
+    elif peak_similarity < 80:
+        determination = "Moderate similarity - Possible match."
+        color = "orange"
+    else:
+        determination = "High similarity - Likely match."
+        color = "green"
+
     stats_text = (
         f"Number of data points: {len(similarities)}\n"
-        f"Peak similarity rate: {max(similarities):.2f}%\n"
+        f"Peak similarity rate: {peak_similarity:.2f}%\n"
         f"Average similarity rate: {np.mean(similarities):.2f}%\n"
-        f"Minimum similarity rate: {min(similarities):.2f}%"
+        f"Minimum similarity rate: {min(similarities):.2f}%\n"
+        f"\nFinal Determination: {determination}"
     )
     if control_var.get():
         stats_text += (
-            f"\nControl 1 - Peak similarity rate: {max(control_similarities_1):.2f}%\n"
+            f"\n\nControl Results:\n"
+            f"Control 1 - Peak similarity rate: {max(control_similarities_1):.2f}%\n"
             f"Control 1 - Average similarity rate: {np.mean(control_similarities_1):.2f}%\n"
             f"Control 1 - Minimum similarity rate: {min(control_similarities_1):.2f}%"
             f"\nControl 2 - Peak similarity rate: {max(control_similarities_2):.2f}%\n"
             f"Control 2 - Average similarity rate: {np.mean(control_similarities_2):.2f}%\n"
             f"Control 2 - Minimum similarity rate: {min(control_similarities_2):.2f}%"
         )
-    plt.text(0.1, 0.5, stats_text, fontsize=12, verticalalignment='center')
+    plt.text(0.1, 0.5, stats_text, fontsize=12, verticalalignment='center', color=color)
 
     plt.tight_layout()
     plt.show()
 
 def compare_files(file1, file2):
     InformationPrinter("Converting files to 'wav' format...")
+    throbber_label.grid()  # Show the throbber label
+    root.update_idletasks()  # Update the GUI
+
     raw_file_1_convert_status = ConvertAnyAudio_to_wav(target_file_path=file1)
     raw_file_2_convert_status = ConvertAnyAudio_to_wav(target_file_path=file2)
 
     if raw_file_1_convert_status["success"] == "false" or raw_file_2_convert_status["success"] == "false":
         ErrorPrinter("File conversion failed.")
         display_results("N/A", "File conversion failed.", "red")
+        throbber_label.grid_remove()  # Hide the throbber label
         return
 
     wav_file_1 = raw_file_1_convert_status["path"]
@@ -310,6 +337,7 @@ def compare_files(file1, file2):
         os.remove(wav_file_1)
         os.remove(wav_file_2)
         display_results("N/A", "Audio comparison failed.", "red")
+        throbber_label.grid_remove()  # Hide the throbber label
         return
 
     if rolling_window_var.get():
@@ -320,7 +348,7 @@ def compare_files(file1, file2):
         if int(voice_similarity_rate) < 60:
             color = "red"
             text = "Low similarity - Not a likely match."
-        elif int(voice_similarity_rate) < 70:
+        elif int(voice_similarity_rate) < 80:
             color = "orange"
             text = "Moderate similarity - Possible match."
         else:
@@ -337,12 +365,13 @@ def compare_files(file1, file2):
             )
             InformationPrinter(control_text)
             result_frame = tk.Frame(root, relief=tk.RAISED, borderwidth=1)
-            result_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+            result_frame.grid(row=8, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
             control_label = tk.Label(result_frame, text=control_text, pady=10)
             control_label.pack()
 
     os.remove(wav_file_1)
     os.remove(wav_file_2)
+    throbber_label.grid_remove()  # Hide the throbber label
 
 def toggle_linear_switch():
     if rolling_window_var.get():
@@ -388,7 +417,7 @@ def select_files():
 def display_results(voice_similarity_rate, text, color):
     InformationPrinter(f"Displaying results: {voice_similarity_rate}% - {text}")
     result_frame = tk.Frame(root, relief=tk.RAISED, borderwidth=1)
-    result_frame.grid(row=5, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+    result_frame.grid(row=7, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
     
     result_label = tk.Label(result_frame, text=f"Similarity rate: {voice_similarity_rate}%", fg=color, pady=10)
     result_label.pack()
@@ -402,7 +431,7 @@ if __name__ == "__main__":
 
     root = tk.Tk()
     root.title(APP_NAME)
-    root.geometry("600x600")
+    root.geometry("600x700")
 
     root.grid_columnconfigure(0, weight=1)
     root.grid_columnconfigure(1, weight=1)
@@ -410,25 +439,40 @@ if __name__ == "__main__":
     file1_entry = create_file_input_box(root, "Select first audio file", 0, 0, 1)
     file2_entry = create_file_input_box(root, "Select second audio file", 0, 1, 1)
 
+    settings_frame = tk.Frame(root, relief=tk.RAISED, borderwidth=1)
+    settings_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+
     control_var = tk.BooleanVar()
-    control_switch = tk.Checkbutton(root, text="Enable Control", variable=control_var)
-    control_switch.grid(row=1, column=0, columnspan=2, pady=10)
+    control_switch = tk.Checkbutton(settings_frame, text="Control Tests (sanity check)", variable=control_var)
+    control_switch.pack(pady=5)
 
     rolling_window_var = tk.BooleanVar()
-    rolling_window_checkbox = tk.Checkbutton(root, text="Enable Rolling Window", variable=rolling_window_var, command=toggle_linear_switch)
-    rolling_window_checkbox.grid(row=2, column=0, columnspan=2, pady=10)
+    rolling_window_checkbox = tk.Checkbutton(settings_frame, text="Enable Rolling Window", variable=rolling_window_var, command=toggle_linear_switch)
+    rolling_window_checkbox.pack(pady=5)
 
     linear_var = tk.BooleanVar()
-    linear_switch = tk.Checkbutton(root, text="Linear Window", variable=linear_var)
-    linear_switch.grid(row=3, column=0, columnspan=2, pady=10)
+    linear_switch = tk.Checkbutton(settings_frame, text="Linear Window", variable=linear_var)
+    linear_switch.pack(pady=5)
     linear_switch.config(state=tk.DISABLED)
 
-    random_order_var = tk.BooleanVar()
-    random_order_switch = tk.Checkbutton(root, text="Random Order", variable=random_order_var)
-    random_order_switch.grid(row=4, column=0, columnspan=2, pady=10)
+    random_order_var = tk.BooleanVar(value=True)  # Set random order to be on by default
+    random_order_switch = tk.Checkbutton(settings_frame, text="Random Order", variable=random_order_var)
+    random_order_switch.pack(pady=5)
     random_order_switch.config(state=tk.DISABLED)
 
+    num_threads_var = tk.IntVar(value=4)
+    num_threads_frame = tk.Frame(settings_frame)
+    num_threads_frame.pack(pady=5)
+    num_threads_label = tk.Label(num_threads_frame, text="Threads:")
+    num_threads_label.pack(side=tk.LEFT)
+    num_threads_entry = tk.Entry(num_threads_frame, textvariable=num_threads_var, width=5)
+    num_threads_entry.pack(side=tk.LEFT)
+
     compare_button = tk.Button(root, text="Compare Files", command=select_files, padx=20, pady=10)
-    compare_button.grid(row=5, column=0, columnspan=2, pady=20)
+    compare_button.grid(row=2, column=0, columnspan=2, pady=20)
+
+    throbber_label = tk.Label(root, text="Processing...", font=("Helvetica", 12))
+    throbber_label.grid(row=3, column=0, columnspan=2, pady=10)
+    throbber_label.grid_remove()  # Hide the throbber label initially
 
     root.mainloop()
