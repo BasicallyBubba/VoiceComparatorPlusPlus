@@ -13,8 +13,10 @@
 <h2>Required libraries:</h2> 
 <br>
 All python dependencies are listed in requirements.txt, which you can automagically install with
+
 ```bash
 pip install -r requirements.txt
+
 ```
 <br>
 You will also need C++ build tools otherwise torch will get angy at you.
