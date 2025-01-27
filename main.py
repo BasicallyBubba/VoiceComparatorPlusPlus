@@ -6,6 +6,7 @@
 # Credit to MehmetYukselSekeroglu for the original code
 # This is just a localization + refactor of his code for the most part.
 
+
 from resemblyzer import preprocess_wav, VoiceEncoder
 import numpy as np
 from pydub import AudioSegment
@@ -16,6 +17,8 @@ import os
 import sys
 import time
 from colorama import *
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
 
 # Style colors and whatnot
@@ -133,26 +136,22 @@ def CompareSounds(sound_1_path:str, sound_2_path:str):
 
 # MAIN EXECUTION BLOCK
 
-if __name__ == "__main__":
-    init()
-    TitlePrinter(f"{APP_NAME} {VERSION_INFO} | {POWERED_BY}")
-    parser = argparse.ArgumentParser()
+def select_files():
+    file_paths = filedialog.askopenfilenames(filetypes=[("Audio Files", "*.mp3 *.ogg *.flac *.aac *.aiff *.wma *.wav")])
+    if len(file_paths) != 2:
+        messagebox.showerror("Error", "Please select exactly two audio files.")
+        return
+    compare_files(file_paths[0], file_paths[1])
 
-    parser.add_argument("--voice1", help="Path to the first voice file", type=str, required=True)
-    parser.add_argument("--voice2", help="Path to the second voice file", type=str, required=True)
-
-    all_args = parser.parse_args()
-    all_args = vars(all_args)
-    raw_file_1 = all_args["voice1"]
-    raw_file_2 = all_args["voice2"]
-
+def compare_files(file1, file2):
     InformationPrinter("Converting files to 'wav' format...")
-    raw_file_1_convert_status = ConvertAnyAudio_to_wav(target_file_path=raw_file_1)
-    raw_file_2_convert_status = ConvertAnyAudio_to_wav(target_file_path=raw_file_2)
+    raw_file_1_convert_status = ConvertAnyAudio_to_wav(target_file_path=file1)
+    raw_file_2_convert_status = ConvertAnyAudio_to_wav(target_file_path=file2)
 
     if raw_file_1_convert_status["success"] == "false" or raw_file_2_convert_status["success"] == "false":
         ErrorPrinter("File conversion failed.")
-        sys.exit(1)
+        messagebox.showerror("Error", "File conversion failed.")
+        return
 
     wav_file_1 = raw_file_1_convert_status["path"]
     wav_file_2 = raw_file_2_convert_status["path"]
@@ -165,7 +164,8 @@ if __name__ == "__main__":
         ErrorPrinter("Audio comparison failed.")
         os.remove(wav_file_1)
         os.remove(wav_file_2)
-        sys.exit(1)
+        messagebox.showerror("Error", "Audio comparison failed.")
+        return
 
     InformationPrinter("Comparison finished. Displaying results...")
     voice_similarity_rate = final_status["similarity"]
@@ -180,10 +180,24 @@ if __name__ == "__main__":
         color = green
         text = "High similarity - Likely match."
 
-    print(f"\n{bold}{blue}|---------- RESULTS ----------|{color_reset}")
-    print(f"{bold}{blue}| Similarity rate: {color} %{str(voice_similarity_rate)}{color_reset}")
-    print(f"{bold}{blue}| [lang:en] Detection information: {color} {str(text)}{color_reset}")
-    print(f"{bold}{blue}|-----------------------------|{color_reset}")
-    
+    result_message = f"Similarity rate: {voice_similarity_rate}%\nDetection information: {text}"
+    messagebox.showinfo("Results", result_message)
+
     os.remove(wav_file_1)
     os.remove(wav_file_2)
+
+if __name__ == "__main__":
+    init()
+    TitlePrinter(f"{APP_NAME} {VERSION_INFO} | {POWERED_BY}")
+
+    root = tk.Tk()
+    root.title(APP_NAME)
+    root.geometry("400x200")
+
+    label = tk.Label(root, text="Drag and drop two audio files to compare", pady=20)
+    label.pack()
+
+    compare_button = tk.Button(root, text="Select Files", command=select_files, padx=20, pady=10)
+    compare_button.pack()
+
+    root.mainloop()
