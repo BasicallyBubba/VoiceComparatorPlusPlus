@@ -27,7 +27,7 @@ https://visualstudio.microsoft.com/visual-cpp-build-tools/
 <br>
 It is super simple. You add two sound clips that you want to compare, and click run! <br>
 This gives you the overall resemblyzer similarity of the full audio inputs. <br>
-If you have any questions on the semantics of resemblizer or the accuracy or algorithm and whatnot, the resemblyzer source code can be found [here](https://github.com/resemble-ai/Resemblyzer) <br> <br>
+If you have any questions on the semantics of resemblizer or the accuracy or algorithm and whatnot, the resemblyzer source code can be found [here](https://github.com/resemble-ai/Resemblyzer).<br> <br>
 You can also break down the audio files into smaller chunks, and compare those chunks to each other. <br>
 Deep compare by default takes a rolling window of samples from the input file. It starts at 1 second window size and increases exponentially up to the point where it exceeds the length of the input. This is very thorough, since it compares every sample to every sample at every window size. <br>
 Fast deep compare is deep compare with a consideration limit. Instead of comparing EVERY sample, it compares n random samples to n random samples (adjustable with the slider). <br>
